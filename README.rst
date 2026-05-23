@@ -96,9 +96,6 @@ Asynchronous
 How to test
 ++++++++++++++++
 
-Clone and install
---------------------
-
 ::
 
    git clone git@github.com:nakagami/sqlalchemy_firebirdsql.git
@@ -106,14 +103,5 @@ Clone and install
    python3 -m venv .venv
    . .venv/bin/activate
    pip install -e .
-   pip install pytest
-
-Create test database and execute pytest
--------------------------------------------
-
-::
-
    prepare-test-environment
-   pytest --db syn
-   pytest --db asyn
-
+   pip install pytest
