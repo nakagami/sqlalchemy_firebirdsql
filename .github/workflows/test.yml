@@ -1,0 +1,45 @@
+name: Python package
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Start Firebird 4.0
+      run: |
+        docker run -d --name firebird \
+          -p 3050:3050 \
+          -e ISC_PASSWORD=masterkey \
+          -v /tmp:/tmp \
+          --entrypoint /bin/bash \
+          jacobalberty/firebird:v4.0.2 \
+          -c "sed -i 's|DatabaseAccess = Restrict /firebird/data|DatabaseAccess = Full|' /usr/local/firebird/skel/etc/firebird.conf && exec /usr/local/firebird/docker-entrypoint.sh firebird"
+        timeout 60 bash -c 'until nc -z localhost 3050; do sleep 1; done'
+        sleep 3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install setuptools
+        python -m pip install --upgrade pip
+        python -m pip install pytest
+    - name: Test
+      run: |
+        python -m pip install -e .
+        prepare-test-environment
+        pytest
