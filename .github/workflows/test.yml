@@ -38,7 +38,7 @@ jobs:
       run: |
         python -m pip install setuptools
         python -m pip install --upgrade pip
-        python -m pip install pytest "sqlalchemy==${{ matrix.sqlalchemy-version }}.*"
+        python -m pip install greenlet pytest "sqlalchemy==${{ matrix.sqlalchemy-version }}.*"
     - name: Test
       run: |
         python -m pip install -e .
