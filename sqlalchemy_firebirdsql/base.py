@@ -1,6 +1,7 @@
 # Allow circular references between FBDialect and FBInspector
 from typing import List
 from typing import Optional
+from typing import TypedDict
 
 from sqlalchemy import exc
 from sqlalchemy import schema as sa_schema
@@ -761,7 +762,7 @@ class FBExecutionContext(default.DefaultExecutionContext):
         )
 
 
-class ReflectedDomain(util.typing.TypedDict):
+class ReflectedDomain(TypedDict):
     """Represents a reflected domain."""
 
     name: str
