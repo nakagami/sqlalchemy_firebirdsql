@@ -15,7 +15,7 @@ It is difficult to support many versions, so I target newer versions.
 
 - Firebird 4.0+
 - SQLAlchemy 2.0+
-- Python 3.10+
+- Python 3.11+
 
 Installation
 ++++++++++++++++

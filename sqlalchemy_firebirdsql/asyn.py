@@ -28,7 +28,10 @@ from sqlalchemy import pool
 from sqlalchemy import util
 from sqlalchemy.engine import AdaptedConnection
 from sqlalchemy.util.concurrency import asyncio
-from sqlalchemy.util.concurrency import await_fallback
+try:
+    from sqlalchemy.util.concurrency import await_fallback
+except ImportError:
+    from sqlalchemy.util.concurrency import await_only as await_fallback
 from sqlalchemy.util.concurrency import await_only
 
 import firebirdsql

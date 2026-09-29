@@ -29,6 +29,7 @@ dependencies = [
     "sqlalchemy>=2.0",
     "firebirdsql",
 ]
+requires-python = ">=3.11"
 dynamic = ["readme", "version"]
 
 [project.entry-points."sqlalchemy.dialects"]

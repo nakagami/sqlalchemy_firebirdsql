@@ -74,12 +74,20 @@ class _FBNumeric(sqltypes.Numeric):
         return None  # Dialect supports_native_decimal = True (no processor needed)
 
 
-class FBFLOAT(_FBNumeric, sqltypes.FLOAT):
+class FBFLOAT(sqltypes.FLOAT):
+    render_bind_cast = True
     __visit_name__ = "FLOAT"
 
+    def bind_processor(self, dialect):
+        return None  # Dialect supports_native_decimal = True (no processor needed)
 
-class FBDOUBLE_PRECISION(_FBNumeric, sqltypes.DOUBLE_PRECISION):
+
+class FBDOUBLE_PRECISION(sqltypes.DOUBLE_PRECISION):
+    render_bind_cast = True
     __visit_name__ = "DOUBLE_PRECISION"
+
+    def bind_processor(self, dialect):
+        return None  # Dialect supports_native_decimal = True (no processor needed)
 
 
 class FBDECFLOAT(_FBNumeric):
@@ -98,8 +106,8 @@ class FBREAL(FBFLOAT):
     __visit_name__ = "REAL"
 
     # Synonym for FLOAT
-    def __init__(self, precision=None, scale=None):
-        super().__init__(None, None)
+    def __init__(self, precision=None, **kw):
+        super().__init__(None, **kw)
 
 
 class _FBFixedPoint(_FBNumeric):
