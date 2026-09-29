@@ -47,4 +47,5 @@ version = {attr = "sqlalchemy_firebirdsql.__version__"}
 [tool.pytest.ini_options]
 markers = [
     "backend: mark test as a backend-specific test",
+    "mypy: mypy typing tests",
 ]
