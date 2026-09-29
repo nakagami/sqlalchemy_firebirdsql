@@ -7,6 +7,6 @@ from .ext import not_similar_to
 from .ext import similar_to
 from .merge import merge
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = ["merge", "not_similar_to", "similar_to", "__version__"]
