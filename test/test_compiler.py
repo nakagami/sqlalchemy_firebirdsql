@@ -367,15 +367,13 @@ class CompileTest(fixtures.TablesTest, AssertsCompiledSQL):
         )
 
     def test_cast_double_pg_double(self):
-        """test #5465:
-
-        test sqlalchemy Double/DOUBLE to Firebird DOUBLE
-        """
+        """test sqlalchemy Double to Firebird DOUBLE PRECISION"""
         d1 = sqltypes.Double
 
         stmt = select(cast(column("foo"), d1))
         self.assert_compile(
-            stmt, "SELECT CAST(foo AS DOUBLE) AS foo FROM rdb$database"
+            stmt,
+            "SELECT CAST(foo AS DOUBLE PRECISION) AS foo FROM rdb$database",
         )
 
     def test_create_table_with_multiple_options(self):

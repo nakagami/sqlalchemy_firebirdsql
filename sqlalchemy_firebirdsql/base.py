@@ -708,6 +708,15 @@ class FBTypeCompiler(compiler.GenericTypeCompiler):
     def visit_FLOAT(self, type_, **kw):
         return "FLOAT" + (type_.precision and "(%d)" % type_.precision or "")
 
+    def visit_DOUBLE(self, type_, **kw):
+        return "DOUBLE PRECISION"
+
+    def visit_DOUBLE_PRECISION(self, type_, **kw):
+        return "DOUBLE PRECISION"
+
+    def visit_double(self, type_, **kw):
+        return "DOUBLE PRECISION"
+
     def visit_DECFLOAT(self, type_, **kw):
         return "DECFLOAT" + (
             type_.precision and "(%d)" % type_.precision or ""
