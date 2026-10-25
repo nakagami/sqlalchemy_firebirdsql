@@ -257,3 +257,32 @@ class MiscBackendTest(
             "SELECT 1 FROM rdb$database UNION ALL SELECT 2 FROM rdb$database"
         )
         eq_(cursor.rowcount, 2)
+
+    def test_connect_args_readonly_and_timeout(self):
+        from sqlalchemy.engine import make_url
+        from sqlalchemy_firebirdsql.syn import FBDialect_syn
+        from sqlalchemy_firebirdsql.asyn import FBDialect_asyn
+
+        for dialect_cls in (FBDialect_syn, FBDialect_asyn):
+            d = dialect_cls()
+            url = make_url(
+                "firebirdsql://sysdba:masterkey@localhost:3050/tmp/test.fdb"
+                "?readonly=true&statement_timeout=5.5"
+            )
+            cargs, cparams = d.create_connect_args(url)
+            eq_(cparams.get("readonly"), True)
+            eq_(cparams.get("statement_timeout"), 5.5)
+
+            url_false = make_url(
+                "firebirdsql://sysdba:masterkey@localhost:3050/tmp/test.fdb"
+                "?readonly=false"
+            )
+            cargs, cparams = d.create_connect_args(url_false)
+            eq_(cparams.get("readonly"), False)
+
+    def test_execution_options_statement_timeout(self):
+        with testing.db.connect() as conn:
+            res = conn.execution_options(timeout=10).execute(
+                text("SELECT 1 FROM rdb$database")
+            )
+            eq_(res.scalar(), 1)

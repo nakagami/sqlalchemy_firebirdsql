@@ -48,7 +48,12 @@ class FBDialect_syn(FBDialect):
 
     def create_connect_args(self, url):
         opts = url.translate_connect_args(username="user")
-        qry = url.query
+        qry = dict(url.query)
+
+        if "readonly" in qry:
+            opts["readonly"] = util.asbool(qry.pop("readonly"))
+        if "statement_timeout" in qry:
+            opts["statement_timeout"] = float(qry.pop("statement_timeout"))
 
         opts.update(qry)
         return ([], opts)

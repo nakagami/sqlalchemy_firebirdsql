@@ -750,6 +750,29 @@ class FBTypeCompiler(compiler.GenericTypeCompiler):
             (type_.timezone and "WITH" or "WITHOUT") + " TIME ZONE",
         )
 
+    def visit_ARRAY(self, type_, **kw):
+        inner = self.process(type_.item_type, **kw)
+        bounds = getattr(type_, "bounds", None)
+        if bounds:
+            parts = []
+            for b in bounds:
+                if isinstance(b, (list, tuple)):
+                    parts.append(f"{b[0]}:{b[1]}")
+                else:
+                    parts.append(str(b))
+            return f"{inner}[{', '.join(parts)}]"
+        elif type_.dimensions is not None:
+            if isinstance(type_.dimensions, (list, tuple)):
+                parts = []
+                for b in type_.dimensions:
+                    if isinstance(b, (list, tuple)):
+                        parts.append(f"{b[0]}:{b[1]}")
+                    else:
+                        parts.append(str(b))
+                return f"{inner}[{', '.join(parts)}]"
+            return f"{inner}[{type_.dimensions}]"
+        return f"{inner}[]"
+
 
 class FBIdentifierPreparer(sql.compiler.IdentifierPreparer):
     illegal_initial_characters = compiler.ILLEGAL_INITIAL_CHARACTERS.union(
@@ -878,10 +901,12 @@ class FBDialect(default.DefaultDialect):
         sa_types.BINARY: fb_types._FBLargeBinary,
         sa_types.VARBINARY: fb_types._FBLargeBinary,
         sa_types.LargeBinary: fb_types._FBLargeBinary,
+        sa_types.ARRAY: fb_types.FBARRAY,
     }
 
     # SELECT TRIM(rdb$type_name) FROM rdb$types WHERE rdb$field_name = 'RDB$FIELD_TYPE' ORDER BY 1
     ischema_names = {
+        "ARRAY": fb_types.FBARRAY,
         "BLOB": fb_types._FBLargeBinary,
         # "BLOB_ID": unused
         "BOOLEAN": fb_types.FBBOOLEAN,
@@ -903,6 +928,28 @@ class FBDialect(default.DefaultDialect):
         "TIMESTAMP WITH TIME ZONE": fb_types.FBTIMESTAMP,
         "VARYING": fb_types.FBVARCHAR,
     }
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+        if context:
+            timeout = context.execution_options.get("timeout", None)
+            if timeout is None:
+                timeout = context.execution_options.get(
+                    "statement_timeout", None
+                )
+            if timeout is not None and hasattr(cursor, "statement_timeout"):
+                cursor.statement_timeout = float(timeout)
+        cursor.execute(statement, parameters)
+
+    def do_executemany(self, cursor, statement, parameters, context=None):
+        if context:
+            timeout = context.execution_options.get("timeout", None)
+            if timeout is None:
+                timeout = context.execution_options.get(
+                    "statement_timeout", None
+                )
+            if timeout is not None and hasattr(cursor, "statement_timeout"):
+                cursor.statement_timeout = float(timeout)
+        cursor.executemany(statement, parameters)
 
     construct_arguments = [
         (
@@ -1194,7 +1241,9 @@ class FBDialect(default.DefaultDialect):
                    f.rdb$computed_source AS computed_source
                   ,rf.rdb$identity_type AS identity_type,                      -- [fb3+]
                    g.rdb$initial_value AS initial_value,                       -- [fb3+]
-                   g.rdb$generator_increment AS generator_increment            -- [fb3+]
+                   g.rdb$generator_increment AS generator_increment,           -- [fb3+]
+                   f.rdb$dimensions AS dimensions,
+                   TRIM(f.rdb$field_name) AS field_source
             FROM rdb$relation_fields rf
                  JOIN rdb$fields f
                    ON f.rdb$field_name = rf.rdb$field_source
@@ -1214,6 +1263,27 @@ class FBDialect(default.DefaultDialect):
         """
         tablename = self.denormalize_name(table_name)
         c = list(connection.exec_driver_sql(columns_query, (tablename,)))
+
+        array_sources = [
+            row.field_source
+            for row in c
+            if row.dimensions and row.dimensions > 0 and row.field_source
+        ]
+        array_bounds = {}
+        if array_sources:
+            quoted_sources = ",".join(f"'{s}'" for s in set(array_sources))
+            dim_query = f"""
+                SELECT TRIM(rdb$field_name) AS field_name,
+                       rdb$lower_bound AS lower_bound,
+                       rdb$upper_bound AS upper_bound
+                FROM rdb$field_dimensions
+                WHERE rdb$field_name IN ({quoted_sources})
+                ORDER BY rdb$field_name, rdb$dimension
+            """
+            for dim_row in connection.exec_driver_sql(dim_query):
+                array_bounds.setdefault(dim_row.field_name, []).append(
+                    (dim_row.lower_bound, dim_row.upper_bound)
+                )
 
         cols = []
         for row in c:
@@ -1277,6 +1347,12 @@ class FBDialect(default.DefaultDialect):
                     coltype = fb_types.FBBLOB(row.segment_length)
             else:
                 coltype = colclass()
+
+            if row.dimensions and row.dimensions > 0:
+                bounds = array_bounds.get(row.field_source)
+                coltype = fb_types.FBARRAY(
+                    coltype, dimensions=row.dimensions, bounds=bounds
+                )
 
             # Extract default value
             defvalue = None

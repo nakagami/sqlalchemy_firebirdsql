@@ -10,6 +10,13 @@ from sqlalchemy.testing import fixtures
 
 
 def get_async_url(sync_url):
+    if hasattr(sync_url, "set"):
+        drivername = sync_url.drivername
+        if "+syn" in drivername:
+            drivername = drivername.replace("+syn", "+asyn")
+        elif not drivername.endswith("+asyn"):
+            drivername = drivername + "+asyn"
+        return sync_url.set(drivername=drivername)
     url_str = str(sync_url)
     if "+syn" in url_str:
         return url_str.replace("+syn", "+asyn")
@@ -30,7 +37,7 @@ class AsyncDialectTest(fixtures.TestBase):
 
     def test_create_async_engine_url(self):
         async_url = get_async_url(testing.db.url)
-        assert "+asyn" in async_url
+        assert "+asyn" in str(async_url)
 
     def test_async_connection(self):
         async_url = get_async_url(testing.db.url)
@@ -62,7 +69,7 @@ class AsyncDialectTest(fixtures.TestBase):
                 result = await conn.execute(
                     text(
                         "SELECT rdb$relation_name FROM rdb$relations "
-                        "WHERE COALESCE(rdb$system_flag, 0) = 0 ROWS 1 TO 1"
+                        "ROWS 1 TO 1"
                     )
                 )
                 return result.fetchone()

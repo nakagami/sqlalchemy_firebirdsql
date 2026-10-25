@@ -270,3 +270,18 @@ class _FBInterval(sqltypes.Interval):
                 return dt.timedelta(days=value) if value is not None else None
 
         return process
+
+
+class FBARRAY(sqltypes.ARRAY):
+    __visit_name__ = "ARRAY"
+
+    def __init__(
+        self,
+        item_type: Any,
+        as_tuple: bool = False,
+        dimensions: Optional[Any] = None,
+        bounds: Optional[Any] = None,
+    ):
+        super().__init__(item_type, as_tuple=as_tuple, dimensions=dimensions)
+        self.bounds = bounds
+

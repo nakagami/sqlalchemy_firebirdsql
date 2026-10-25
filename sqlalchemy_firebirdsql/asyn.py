@@ -79,6 +79,17 @@ class AsyncAdapt_firebirdsql_cursor:
     def lastrowid(self):
         return self._cursor.lastrowid
 
+    @property
+    def statement_timeout(self):
+        return getattr(self._cursor, "statement_timeout", None)
+
+    @statement_timeout.setter
+    def statement_timeout(self, value):
+        self._cursor.statement_timeout = value
+
+    async def _async_soft_close(self):
+        return
+
     def close(self):
         # note we aren't actually closing the cursor here,
         # we are just letting GC do it.   to allow this to be async
@@ -171,7 +182,7 @@ class AsyncAdapt_firebirdsql_connection(AdaptedConnection):
         self._connection.close()
 
     def close(self) -> None:
-        self.await_(self._connection.ensure_closed())
+        self.await_(self._connection.close())
 
 
 class AsyncAdaptFallback_firebirdsql_connection(AsyncAdapt_firebirdsql_connection):
@@ -198,7 +209,6 @@ class AsyncAdapt_firebirdsql_dbapi:
             "DataError",
             "DatabaseError",
             "OperationalError",
-            "InterfaceError",
             "IntegrityError",
             "ProgrammingError",
             "InternalError",
@@ -212,9 +222,12 @@ class AsyncAdapt_firebirdsql_dbapi:
             "DATETIME",
             "BINARY",
             "TIMESTAMP",
+            "ARRAY",
+            "ROWID",
             "Binary",
         ):
-            setattr(self, name, getattr(firebirdsql, name))
+            if hasattr(firebirdsql, name):
+                setattr(self, name, getattr(firebirdsql, name))
 
     def connect(self, *arg, **kw):
         async_fallback = kw.pop("async_fallback", False)
@@ -259,7 +272,12 @@ class FBDialect_asyn(FBDialect):
 
     def create_connect_args(self, url):
         opts = url.translate_connect_args(username="user")
-        qry = url.query
+        qry = dict(url.query)
+
+        if "readonly" in qry:
+            opts["readonly"] = util.asbool(qry.pop("readonly"))
+        if "statement_timeout" in qry:
+            opts["statement_timeout"] = float(qry.pop("statement_timeout"))
 
         opts.update(qry)
         return ([], opts)

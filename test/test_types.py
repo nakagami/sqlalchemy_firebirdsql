@@ -393,3 +393,25 @@ class TypesTest(fixtures.TestBase):
         result.close()
         eq_(row.df34, pi)
         eq_(row.df16, small)
+
+    @testing.provide_metadata
+    def test_array_type(self, connection):
+        t = Table(
+            "test_array_type",
+            self.metadata,
+            Column("id", sa_types.INTEGER, primary_key=True),
+            Column("vals", fb_types.FBARRAY(sa_types.INTEGER, bounds=[(1, 3)])),
+        )
+        self.metadata.create_all(testing.db)
+
+        connection.execute(t.insert().values(id=1, vals=[10, 20, 30]))
+        row = connection.execute(select(t)).fetchone()
+        eq_(row.id, 1)
+        eq_(row.vals, [10, 20, 30])
+
+        rm = MetaData()
+        rt = Table("test_array_type", rm, autoload_with=testing.db)
+        is_instance_of(rt.c.vals.type, fb_types.FBARRAY)
+        eq_(rt.c.vals.type.dimensions, 1)
+        eq_(rt.c.vals.type.bounds, [(1, 3)])
+

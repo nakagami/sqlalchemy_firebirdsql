@@ -27,7 +27,7 @@ classifiers = [
 ]
 dependencies = [
     "sqlalchemy>=2.0",
-    "firebirdsql",
+    "firebirdsql>=1.5.0",
 ]
 requires-python = ">=3.11"
 dynamic = ["readme", "version"]
@@ -43,6 +43,9 @@ prepare-test-environment = "sqlalchemy_firebirdsql:infrastructure.prepare_test_e
 [tool.setuptools.dynamic]
 readme = {file = ["README.rst"], content-type = "text/x-rst"}
 version = {attr = "sqlalchemy_firebirdsql.__version__"}
+
+[tool.setuptools.package-data]
+sqlalchemy_firebirdsql = ["py.typed"]
 
 [tool.pytest.ini_options]
 markers = [

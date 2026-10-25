@@ -155,6 +155,24 @@ class CompileTest(fixtures.TablesTest, AssertsCompiledSQL):
             "CREATE TABLE testtbl (flag BOOLEAN)",
         )
 
+    def test_array_ddl(self):
+        m = MetaData()
+        tbl = Table(
+            "testtbl",
+            m,
+            Column("a1", FbTypes.FBARRAY(Integer, dimensions=5)),
+            Column("a2", FbTypes.FBARRAY(Integer, bounds=[(1, 10)])),
+            Column("a3", FbTypes.FBARRAY(String(20), bounds=[(1, 5), (1, 10)])),
+        )
+        self.assert_compile(
+            schema.CreateTable(tbl),
+            "CREATE TABLE testtbl ("
+            "a1 INTEGER[5], "
+            "a2 INTEGER[1:10], "
+            "a3 VARCHAR(20)[1:5, 1:10]"
+            ")",
+        )
+
     def test_timestamp_timezone_ddl(self):
         m = MetaData()
         tbl = Table(
